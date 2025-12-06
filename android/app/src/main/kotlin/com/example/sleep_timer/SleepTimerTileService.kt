@@ -23,7 +23,7 @@ class SleepTimerTileService : TileService() {
         private const val FLUTTER_KEY_PREFIX = "flutter."
         private const val KEY_REMAINING_TIME_MS = "remaining_time_ms"
         private const val KEY_START_TIME_MS = "start_time_ms"
-        private const val DEFAULT_DURATION = 120 // 2 hours for testing
+        private const val DEFAULT_DURATION = 60 // 1 hour default
     }
 
     override fun onCreate() {
@@ -100,9 +100,7 @@ class SleepTimerTileService : TileService() {
     private fun startTimer(durationMinutes: Int) {
         Log.d(TAG, "Starting timer for $durationMinutes minutes")
         
-        // FOR TESTING: Hardcoded to 1 minute
-        val durationMs = 1 * 60 * 1000L
-        // val durationMs = durationMinutes * 60 * 1000L
+        val durationMs = durationMinutes * 60 * 1000L
         val triggerAtMillis = System.currentTimeMillis() + durationMs
         
         // Save state (save total duration, not remaining)
@@ -236,7 +234,7 @@ class SleepTimerTileService : TileService() {
                 tile.state = Tile.STATE_INACTIVE
                 val defaultDuration = getUserSetDuration()
                 tile.label = "Sleep Timer"
-                tile.subtitle = "Start 1min"
+                tile.subtitle = "Start ${defaultDuration}min"
             }
         }
         
