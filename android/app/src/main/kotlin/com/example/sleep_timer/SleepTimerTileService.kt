@@ -100,7 +100,9 @@ class SleepTimerTileService : TileService() {
     private fun startTimer(durationMinutes: Int) {
         Log.d(TAG, "Starting timer for $durationMinutes minutes")
         
-        val durationMs = durationMinutes * 60 * 1000L
+        // FOR TESTING: Hardcoded to 1 minute
+        val durationMs = 1 * 60 * 1000L
+        // val durationMs = durationMinutes * 60 * 1000L
         val triggerAtMillis = System.currentTimeMillis() + durationMs
         
         // Save state (save total duration, not remaining)
@@ -234,7 +236,7 @@ class SleepTimerTileService : TileService() {
                 tile.state = Tile.STATE_INACTIVE
                 val defaultDuration = getUserSetDuration()
                 tile.label = "Sleep Timer"
-                tile.subtitle = "Start ${defaultDuration}min"
+                tile.subtitle = "Start 1min"
             }
         }
         
