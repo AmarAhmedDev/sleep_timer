@@ -2,9 +2,11 @@ package com.example.sleep_timer
 
 import android.app.ActivityManager
 import android.app.admin.DevicePolicyManager
+import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.media.AudioManager
 import android.media.AudioFocusRequest
 import android.media.AudioAttributes
@@ -85,6 +87,16 @@ class MainActivity: FlutterActivity() {
             }
         }
         Log.d(TAG, "=== MethodChannel handler registered ===")
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        
+        // Check if triggered by tile timer expiration
+        if (intent.getBooleanExtra("trigger_sleep_actions", false)) {
+            Log.d(TAG, "=== TRIGGERED BY TILE TIMER EXPIRATION ===")
+            stopMediaAndCloseApps()
+        }
     }
 
     private fun stopMediaAndCloseApps() {
