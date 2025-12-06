@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    
+    <!-- Alarm clock bell (left) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M3,6 C3,4.5 4,3.5 5,4 L6,5 L5,6 C4,6.5 3,6.5 3,6 Z"/>
+    
+    <!-- Alarm clock bell (right) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M21,6 C21,4.5 20,3.5 19,4 L18,5 L19,6 C20,6.5 21,6.5 21,6 Z"/>
+    
+    <!-- Main clock circle -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M12,4 C8.13,4 5,7.13 5,11 C5,14.87 8.13,18 12,18 C15.87,18 19,14.87 19,11 C19,7.13 15.87,4 12,4 Z M12,16 C9.24,16 7,13.76 7,11 C7,8.24 9.24,6 12,6 C14.76,6 17,8.24 17,11 C17,13.76 14.76,16 12,16 Z"/>
+    
+    <!-- Hour hand -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M11.5,7.5 L11.5,11.5 L12.5,11.5 L12.5,7.5 Z"/>
+    
+    <!-- Minute hand -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M11.5,11 L14,11 L14,12 L11.5,12 Z"/>
+    
+    <!-- Crescent moon inside clock -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M13,9 C13,10.1 12.1,11 11,11 C11,9.9 11.9,9 13,9 Z"/>
+    
+    <!-- Clock legs -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M9,18 L9,20 L10,20 L10,18 Z"/>
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M14,18 L14,20 L15,20 L15,18 Z"/>
+</vector>
