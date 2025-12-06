@@ -81,6 +81,13 @@ class MainActivity: FlutterActivity() {
                     vibrate()
                     result.success(true)
                 }
+                "getTileDuration" -> {
+                    // Get tile duration from SharedPreferences
+                    val prefs = getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+                    val duration = prefs.getInt("flutter.default_duration_minutes", 30)
+                    Log.d(TAG, "getTileDuration returning: $duration")
+                    result.success(duration)
+                }
                 else -> {
                     result.notImplemented()
                 }

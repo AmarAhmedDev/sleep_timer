@@ -63,6 +63,45 @@ class SettingsScreen extends StatelessWidget {
             ),
           ]),
           const SizedBox(height: 20),
+          _buildSection(context, 'Quick Settings Tile', [
+            Consumer<SettingsProvider>(
+              builder: (context, settings, _) {
+                return Column(
+                  children: [
+                    ListTile(
+                      title: const Text('Tile Timer Duration'),
+                      subtitle: Text('${settings.tileDurationMinutes} minutes'),
+                      leading: const Icon(Icons.timer),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Slider(
+                        value: settings.tileDurationMinutes.toDouble(),
+                        min: 1,
+                        max: 120,
+                        divisions: 119,
+                        label: '${settings.tileDurationMinutes} min',
+                        onChanged: (value) {
+                          settings.setTileDuration(value.round());
+                        },
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                      child: Text(
+                        'Sets the default duration when you tap the Quick Settings tile',
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodySmall?.copyWith(color: Colors.grey),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ]),
+          const SizedBox(height: 20),
           _buildSection(context, 'Media Control', [
             Consumer<SettingsProvider>(
               builder: (context, settings, _) {

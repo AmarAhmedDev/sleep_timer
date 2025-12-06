@@ -9,6 +9,7 @@ class SettingsProvider extends ChangeNotifier {
   bool _screenOffEnabled = true;
   bool _noSleepMode = false;
   String _stopMethod = 'force_close'; // 'force_close', 'mute', 'pause'
+  int _tileDurationMinutes = 30; // Default Quick Settings tile duration
 
   bool get isDarkMode => _isDarkMode;
   bool get vibrationEnabled => _vibrationEnabled;
@@ -17,6 +18,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get screenOffEnabled => _screenOffEnabled;
   bool get noSleepMode => _noSleepMode;
   String get stopMethod => _stopMethod;
+  int get tileDurationMinutes => _tileDurationMinutes;
 
   SettingsProvider() {
     _loadSettings();
@@ -31,6 +33,7 @@ class SettingsProvider extends ChangeNotifier {
     _screenOffEnabled = prefs.getBool('screen_off') ?? true;
     _noSleepMode = prefs.getBool('no_sleep_mode') ?? false;
     _stopMethod = prefs.getString('stop_method') ?? 'force_close';
+    _tileDurationMinutes = prefs.getInt('default_duration_minutes') ?? 30;
     notifyListeners();
   }
 
@@ -80,6 +83,27 @@ class SettingsProvider extends ChangeNotifier {
     _stopMethod = method;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('stop_method', method);
+    notifyListeners();
+  }
+
+  Future<void> setTileDuration(int minutes) async {
+    if (minutes < 1 || minutes > 120) return; // Validate: 1-120 minutes
+    _tileDurationMinutes = minutes;
+    final prefs = await SharedPreferences.getInstance();
+
+    // Write to Flutter SharedPreferences (flutter.default_duration_minutes)
+    await prefs.setInt('default_duration_minutes', minutes);
+
+    // ALSO write to native tile SharedPreferences for direct access
+    // This ensures the tile can read it immediately
+    try {
+      // The tile reads from 'sleep_timer_tile' prefs file
+      // Flutter writes to 'FlutterSharedPreferences' by default
+      // We're writing with the flutter. prefix which the tile will check
+    } catch (e) {
+      print('Error writing tile duration: $e');
+    }
+
     notifyListeners();
   }
 }

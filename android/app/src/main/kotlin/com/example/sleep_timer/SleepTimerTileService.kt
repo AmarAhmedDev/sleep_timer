@@ -4,7 +4,6 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.drawable.Icon
 import android.os.Build
-import android.os.CountDownTimer
 import android.provider.Settings
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
@@ -15,15 +14,16 @@ import androidx.annotation.RequiresApi
 class SleepTimerTileService : TileService() {
     private val TAG = "SleepTimerTile"
     private lateinit var prefs: SharedPreferences
-    private var countDownTimer: CountDownTimer? = null
 
     companion object {
         private const val PREFS_NAME = "sleep_timer_tile"
+        private const val FLUTTER_PREFS_NAME = "FlutterSharedPreferences" // Flutter's default
         private const val KEY_IS_TIMER_ACTIVE = "is_timer_active"
         private const val KEY_DEFAULT_DURATION_MINUTES = "default_duration_minutes"
+        private const val FLUTTER_KEY_PREFIX = "flutter."
         private const val KEY_REMAINING_TIME_MS = "remaining_time_ms"
         private const val KEY_START_TIME_MS = "start_time_ms"
-        private const val DEFAULT_DURATION = 30 // 30 minutes default
+        private const val DEFAULT_DURATION = 1 // 1 minute for testing
     }
 
     override fun onCreate() {
@@ -58,51 +58,101 @@ class SleepTimerTileService : TileService() {
             // Stop timer
             stopTimer()
         } else {
-            // Start timer with default duration
-            val durationMinutes = prefs.getInt(KEY_DEFAULT_DURATION_MINUTES, DEFAULT_DURATION)
+            // Start timer with duration from Flutter settings (user-set) or default
+            val durationMinutes = getUserSetDuration()
             startTimer(durationMinutes)
         }
         
         updateTile()
+    }
+    
+    private fun getUserSetDuration(): Int {
+        Log.d(TAG, "=== getUserSetDuration() called ===")
+        
+        // Try to read from Flutter SharedPreferences
+        try {
+            val flutterPrefs = getSharedPreferences(FLUTTER_PREFS_NAME, MODE_PRIVATE)
+            val flutterKey = FLUTTER_KEY_PREFIX + KEY_DEFAULT_DURATION_MINUTES
+            
+            Log.d(TAG, "Looking for key: $flutterKey")
+            
+            if (flutterPrefs.contains(flutterKey)) {
+                val duration = flutterPrefs.getInt(flutterKey, DEFAULT_DURATION)
+                Log.d(TAG, "✓ Found duration in Flutter prefs: $duration minutes")
+                return duration
+            } else {
+                Log.w(TAG, "✗ Key '$flutterKey' not found in Flutter prefs")
+                
+                // Debug: log all keys
+                val allKeys = flutterPrefs.all.keys
+                Log.d(TAG, "Available keys in Flutter prefs: $allKeys")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error reading Flutter prefs: ${e.message}")
+            e.printStackTrace()
+        }
+        
+        // Fallback to default
+        Log.d(TAG, "Using default duration: $DEFAULT_DURATION minutes")
+        return DEFAULT_DURATION
     }
 
     private fun startTimer(durationMinutes: Int) {
         Log.d(TAG, "Starting timer for $durationMinutes minutes")
         
         val durationMs = durationMinutes * 60 * 1000L
+        val triggerAtMillis = System.currentTimeMillis() + durationMs
         
-        // Save state
+        // Save state (save total duration, not remaining)
         prefs.edit().apply {
             putBoolean(KEY_IS_TIMER_ACTIVE, true)
-            putLong(KEY_REMAINING_TIME_MS, durationMs)
+            putLong(KEY_REMAINING_TIME_MS, durationMs) // Total duration
             putLong(KEY_START_TIME_MS, System.currentTimeMillis())
             apply()
         }
         
-        // Start countdown timer
-        countDownTimer?.cancel()
-        countDownTimer = object : CountDownTimer(durationMs, 1000) {
-            override fun onTick(millisUntilFinished: Long) {
-                prefs.edit().putLong(KEY_REMAINING_TIME_MS, millisUntilFinished).apply()
-                updateTile()
-            }
-
-            override fun onFinish() {
-                // Timer expired - trigger media pause and screen lock
-                Log.d(TAG, "Timer expired!")
-                triggerSleepActions()
-                stopTimer()
-            }
-        }.start()
+        // Use AlarmManager for reliable background timer
+        val alarmManager = getSystemService(ALARM_SERVICE) as android.app.AlarmManager
+        val intent = Intent(this, TileTimerReceiver::class.java)
+        val pendingIntent = android.app.PendingIntent.getBroadcast(
+            this,
+            0,
+            intent,
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+        )
         
+        // Set exact alarm
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            alarmManager.setExactAndAllowWhileIdle(
+                android.app.AlarmManager.RTC_WAKEUP,
+                triggerAtMillis,
+                pendingIntent
+            )
+        } else {
+            alarmManager.setExact(
+                android.app.AlarmManager.RTC_WAKEUP,
+                triggerAtMillis,
+                pendingIntent
+            )
+        }
+        
+        Log.d(TAG, "Timer scheduled via AlarmManager for ${durationMinutes}min")
         updateTile()
     }
 
     private fun stopTimer() {
         Log.d(TAG, "Stopping timer")
         
-        countDownTimer?.cancel()
-        countDownTimer = null
+        // Cancel alarm
+        val alarmManager = getSystemService(ALARM_SERVICE) as android.app.AlarmManager
+        val intent = Intent(this, TileTimerReceiver::class.java)
+        val pendingIntent = android.app.PendingIntent.getBroadcast(
+            this,
+            0,
+            intent,
+            android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
+        )
+        alarmManager.cancel(pendingIntent)
         
         prefs.edit().apply {
             putBoolean(KEY_IS_TIMER_ACTIVE, false)
@@ -147,7 +197,13 @@ class SleepTimerTileService : TileService() {
             }
             isTimerActive -> {
                 tile.state = Tile.STATE_ACTIVE
-                val remainingMs = prefs.getLong(KEY_REMAINING_TIME_MS, 0)
+                
+                // Calculate remaining time from start time
+                val startTime = prefs.getLong(KEY_START_TIME_MS, 0)
+                val totalDuration = prefs.getLong(KEY_REMAINING_TIME_MS, 0)
+                val elapsed = System.currentTimeMillis() - startTime
+                val remainingMs = maxOf(0, totalDuration - elapsed)
+                
                 val remainingMinutes = (remainingMs / 60000).toInt()
                 val remainingSeconds = ((remainingMs % 60000) / 1000).toInt()
                 
@@ -157,10 +213,19 @@ class SleepTimerTileService : TileService() {
                 } else {
                     tile.subtitle = "${remainingSeconds}s"
                 }
+                
+                // Schedule next update in 1 second if still active
+                if (remainingMs > 0) {
+                    android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                        if (prefs.getBoolean(KEY_IS_TIMER_ACTIVE, false)) {
+                            updateTile()
+                        }
+                    }, 1000)
+                }
             }
             else -> {
                 tile.state = Tile.STATE_INACTIVE
-                val defaultDuration = prefs.getInt(KEY_DEFAULT_DURATION_MINUTES, DEFAULT_DURATION)
+                val defaultDuration = getUserSetDuration()
                 tile.label = "Sleep Timer"
                 tile.subtitle = "Start ${defaultDuration}min"
             }
@@ -181,11 +246,6 @@ class SleepTimerTileService : TileService() {
             Log.e(TAG, "Error checking notification listener: ${e.message}")
             false
         }
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        countDownTimer?.cancel()
     }
 }
 

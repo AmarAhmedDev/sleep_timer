@@ -16,9 +16,10 @@
         tools:ignore="ProtectedPermissions"/>
     <uses-permission android:name="android.permission.MEDIA_CONTENT_CONTROL"
         tools:ignore="ProtectedPermissions"/>
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"/>
     
     <application
-        android:label="Smart Sleep Timer"
+        android:label="Sleep Timer"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -92,6 +93,11 @@
                 <action android:name="android.service.quicksettings.action.QS_TILE" />
             </intent-filter>
         </service>
+        
+        <!-- Tile Timer Receiver -->
+        <receiver
+            android:name=".TileTimerReceiver"
+            android:exported="false"/>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and
