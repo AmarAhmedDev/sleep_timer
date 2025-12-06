@@ -154,6 +154,10 @@ class SleepTimerTileService : TileService() {
         )
         alarmManager.cancel(pendingIntent)
         
+        // Cancel countdown notification
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
+        notificationManager.cancel(1)
+        
         prefs.edit().apply {
             putBoolean(KEY_IS_TIMER_ACTIVE, false)
             putLong(KEY_REMAINING_TIME_MS, 0)
@@ -214,6 +218,9 @@ class SleepTimerTileService : TileService() {
                     tile.subtitle = "${remainingSeconds}s"
                 }
                 
+                // Update countdown notification
+                showCountdownNotification(remainingMs / 1000)
+                
                 // Schedule next update in 1 second if still active
                 if (remainingMs > 0) {
                     android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
@@ -245,6 +252,58 @@ class SleepTimerTileService : TileService() {
         } catch (e: Exception) {
             Log.e(TAG, "Error checking notification listener: ${e.message}")
             false
+        }
+    }
+    
+    private fun showCountdownNotification(remainingSeconds: Long) {
+        try {
+            val notificationManager = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
+            
+            // Create notification channel (Android 8.0+)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val channel = android.app.NotificationChannel(
+                    "sleep_timer_ongoing_v2",
+                    "Active Timer",
+                    android.app.NotificationManager.IMPORTANCE_HIGH
+                ).apply {
+                    description = "Shows active sleep timer countdown"
+                    enableVibration(true)
+                    enableLights(true)
+                }
+                notificationManager.createNotificationChannel(channel)
+            }
+            
+            // Format time
+            val hours = remainingSeconds / 3600
+            val minutes = (remainingSeconds % 3600) / 60
+            val seconds = remainingSeconds % 60
+            
+            val timeStr = if (hours > 0) {
+                String.format("%dh %dm %ds", hours, minutes, seconds)
+            } else if (minutes > 0) {
+                String.format("%dm %ds", minutes, seconds)
+            } else {
+                String.format("%ds", seconds)
+            }
+            
+            // Build notification
+            val notification = android.app.Notification.Builder(this, "sleep_timer_ongoing_v2")
+                .apply {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+                    }
+                }
+                .setContentTitle("Sleep Timer Active")
+                .setContentText("$timeStr remaining")
+                .setOngoing(true)
+                .setShowWhen(false)
+                .setOnlyAlertOnce(true) // Alert only the first time
+                .setDefaults(android.app.Notification.DEFAULT_ALL) // Sound and vibration
+                .build()
+            
+            notificationManager.notify(1, notification)
+        } catch (e: Exception) {
+            Log.e(TAG, "Error showing countdown notification: ${e.message}")
         }
     }
 }

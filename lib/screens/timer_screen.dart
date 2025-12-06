@@ -56,12 +56,6 @@ class _TimerScreenState extends State<TimerScreen> {
       _isTimerActive = true;
     });
 
-    // Show notification
-    await NotificationService.showTimerStartedNotification(
-      hours: selectedHours,
-      minutes: selectedMinutes,
-    );
-
     // Start countdown
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_remainingSeconds > 0) {

@@ -32,14 +32,7 @@ class TimerProvider extends ChangeNotifier {
     _isRunning = true;
     notifyListeners();
 
-    // Show notification
-    final hours = seconds ~/ 3600;
-    final minutes = (seconds % 3600) ~/ 60;
-    NotificationService.showTimerStartedNotification(
-      hours: hours,
-      minutes: minutes,
-    );
-
+    // Start timer
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_remainingSeconds > 0) {
         _remainingSeconds--;

@@ -65,14 +65,17 @@ class NotificationService {
     timeStr += '${seconds}s';
 
     const androidDetails = AndroidNotificationDetails(
-      'sleep_timer_ongoing',
+      'sleep_timer_ongoing_v2',
       'Active Timer',
       channelDescription: 'Shows active sleep timer countdown',
-      importance: Importance.low,
-      priority: Priority.low,
+      importance: Importance.high,
+      priority: Priority.high,
       ongoing: true,
       autoCancel: false,
       showWhen: false,
+      onlyAlertOnce: true,
+      playSound: true,
+      enableVibration: true,
     );
 
     const details = NotificationDetails(android: androidDetails);
