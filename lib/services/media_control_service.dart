@@ -61,4 +61,54 @@ class MediaControlService {
       return false;
     }
   }
+
+  // Device Admin methods for screen lock
+  static Future<void> requestDeviceAdmin() async {
+    print('MediaControlService: Requesting Device Admin...');
+    try {
+      await platform.invokeMethod('requestDeviceAdmin');
+      print('MediaControlService: Device Admin request sent');
+    } on PlatformException catch (e) {
+      print('MediaControlService Device Admin error: ${e.code} - ${e.message}');
+    } catch (e) {
+      print('MediaControlService Device Admin error: $e');
+    }
+  }
+
+  static Future<bool> isDeviceAdminActive() async {
+    try {
+      final bool isActive = await platform.invokeMethod('isDeviceAdminActive');
+      return isActive;
+    } catch (e) {
+      print('Error checking Device Admin: $e');
+      return false;
+    }
+  }
+
+  // Notification Listener methods for media control
+  static Future<void> requestNotificationListener() async {
+    print('MediaControlService: Requesting Notification Listener...');
+    try {
+      await platform.invokeMethod('requestNotificationListener');
+      print('MediaControlService: Notification Listener request sent');
+    } on PlatformException catch (e) {
+      print(
+        'MediaControlService Notification Listener error: ${e.code} - ${e.message}',
+      );
+    } catch (e) {
+      print('MediaControlService Notification Listener error: $e');
+    }
+  }
+
+  static Future<bool> isNotificationListenerEnabled() async {
+    try {
+      final bool isEnabled = await platform.invokeMethod(
+        'checkNotificationListener',
+      );
+      return isEnabled;
+    } catch (e) {
+      print('Error checking Notification Listener: $e');
+      return false;
+    }
+  }
 }

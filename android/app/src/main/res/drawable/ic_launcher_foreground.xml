@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    
+    <!-- Moon -->
+    <path
+        android:fillColor="#F1C40F"
+        android:pathData="M54,30 A24,24 0 1,1 54,78 A18,18 0 1,0 54,30"/>
+    
+    <!-- Stars -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M25,25 L26,28 L29,28 L27,30 L28,33 L25,31 L22,33 L23,30 L21,28 L24,28 Z"/>
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M80,20 L81,22 L83,22 L81.5,23.5 L82,26 L80,24.5 L78,26 L78.5,23.5 L77,22 L79,22 Z"/>
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M85,45 L86,47 L88,47 L86.5,48.5 L87,51 L85,49.5 L83,51 L83.5,48.5 L82,47 L84,47 Z"/>
+    
+    <!-- Timer circle -->
+    <path
+        android:fillColor="@android:color/transparent"
+        android:strokeColor="#9B59B6"
+        android:strokeWidth="2"
+        android:pathData="M54,75 m-12,0 a12,12 0 1,1 24,0 a12,12 0 1,1 -24,0"/>
+    
+    <!-- Timer hands -->
+    <path
+        android:strokeColor="#9B59B6"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M54,75 L54,67"/>
+    <path
+        android:strokeColor="#9B59B6"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:pathData="M54,75 L60,78"/>
+    
+    <!-- Z for sleep -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M70,55 L78,55 L70,65 L78,65"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"/>
+</vector>

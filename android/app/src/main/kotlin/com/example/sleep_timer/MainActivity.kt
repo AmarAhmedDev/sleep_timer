@@ -1,6 +1,8 @@
 package com.example.sleep_timer
 
 import android.app.ActivityManager
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.media.AudioManager
@@ -9,6 +11,8 @@ import android.media.AudioAttributes
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
+import android.os.PowerManager
+import android.provider.Settings
 import android.view.KeyEvent
 import android.util.Log
 import androidx.annotation.NonNull
@@ -20,11 +24,17 @@ class MainActivity: FlutterActivity() {
     private val CHANNEL = "com.sleeptimer/media_control"
     private val TAG = "SleepTimer"
     private var methodChannel: MethodChannel? = null
+    private var devicePolicyManager: DevicePolicyManager? = null
+    private var adminComponent: ComponentName? = null
 
     override fun configureFlutterEngine(@NonNull flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         
         Log.d(TAG, "=== MainActivity configureFlutterEngine CALLED ===")
+        
+        // Initialize Device Admin
+        devicePolicyManager = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        adminComponent = ComponentName(this, SleepTimerDeviceAdminReceiver::class.java)
         
         methodChannel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, CHANNEL)
         methodChannel?.setMethodCallHandler { call, result ->
@@ -37,7 +47,24 @@ class MainActivity: FlutterActivity() {
                 }
                 "lockScreen" -> {
                     Log.d(TAG, "lockScreen called")
-                    lockScreen()
+                    val success = lockScreen()
+                    result.success(success)
+                }
+                "requestDeviceAdmin" -> {
+                    Log.d(TAG, "requestDeviceAdmin called")
+                    requestDeviceAdminPermission()
+                    result.success(true)
+                }
+                "isDeviceAdminActive" -> {
+                    val isActive = isDeviceAdminActive()
+                    result.success(isActive)
+                }
+                "checkNotificationListener" -> {
+                    val isEnabled = isNotificationListenerEnabled()
+                    result.success(isEnabled)
+                }
+                "requestNotificationListener" -> {
+                    requestNotificationListenerPermission()
                     result.success(true)
                 }
                 "getForegroundApp" -> {
@@ -61,27 +88,35 @@ class MainActivity: FlutterActivity() {
     }
 
     private fun stopMediaAndCloseApps() {
-        Log.d(TAG, "Starting media stop sequence...")
+        Log.d(TAG, "Starting enhanced media stop sequence...")
         
         val handler = Handler(Looper.getMainLooper())
         
         // Execute on main thread
         handler.post {
             try {
-                // STEP 1: Send shell commands for media keys (MOST RELIABLE)
-                Log.d(TAG, "Step 1: Sending shell media key commands...")
+                // STEP 1: Use NotificationListener MediaSession control (MOST RELIABLE)
+                Log.d(TAG, "Step 1: Pausing via MediaSession...")
+                NotificationListener.pauseAllMedia(this)
+                
+                // STEP 2: Send shell commands for media keys
+                Log.d(TAG, "Step 2: Sending shell media key commands...")
                 sendShellMediaCommands()
                 
-                // STEP 2: Use AudioManager key events
-                Log.d(TAG, "Step 2: Sending AudioManager key events...")
+                // STEP 3: Send broadcast pause commands (for apps like YouTube)
+                Log.d(TAG, "Step 3: Sending broadcast pause...")
+                sendBroadcastPause()
+                
+                // STEP 4: Use AudioManager key events
+                Log.d(TAG, "Step 4: Sending AudioManager key events...")
                 sendAudioManagerKeyEvents()
                 
-                // STEP 3: Request audio focus
-                Log.d(TAG, "Step 3: Requesting audio focus...")
+                // STEP 5: Request audio focus
+                Log.d(TAG, "Step 5: Requesting audio focus...")
                 requestAudioFocusInterrupt()
                 
-                // STEP 4: Mute all audio
-                Log.d(TAG, "Step 4: Muting audio...")
+                // STEP 6: Mute all audio
+                Log.d(TAG, "Step 6: Muting audio...")
                 muteAllAudio()
                 
             } catch (e: Exception) {
@@ -90,37 +125,62 @@ class MainActivity: FlutterActivity() {
             }
         }
         
-        // STEP 5: Go to home screen after short delay
+        // STEP 7: Go to home screen after short delay
         handler.postDelayed({
-            Log.d(TAG, "Step 5: Going to home screen...")
+            Log.d(TAG, "Step 7: Going to home screen...")
             goToHomeScreen()
-        }, 300)
+        }, 400)
         
-        // STEP 6: Send pause again
+        // STEP 8: Send pause commands again
         handler.postDelayed({
-            Log.d(TAG, "Step 6: Second pause attempt...")
+            Log.d(TAG, "Step 8: Second pause attempt...")
+            NotificationListener.pauseAllMedia(this)
             sendShellMediaCommands()
-            sendAudioManagerKeyEvents()
-        }, 600)
+            sendBroadcastPause()
+        }, 700)
         
-        // STEP 7: Kill media app processes
+        // STEP 9: Kill media app processes
         handler.postDelayed({
-            Log.d(TAG, "Step 7: Killing media apps...")
+            Log.d(TAG, "Step 9: Killing media apps...")
             killMediaAppProcesses()
-        }, 900)
+        }, 1000)
         
-        // STEP 8: Final mute and pause
+        // STEP 10: Lock screen if Device Admin is active
         handler.postDelayed({
-            Log.d(TAG, "Step 8: Final mute and pause...")
-            muteAllAudio()
+            Log.d(TAG, "Step 10: Locking screen...")
+            lockScreen()
+        }, 1300)
+        
+        // STEP 11: Final pause attempt
+        handler.postDelayed({
+            Log.d(TAG, "Step 11: Final pause...")
+            NotificationListener.pauseAllMedia(this)
             sendShellMediaCommands()
-        }, 1200)
+        }, 1500)
         
         // Vibrate to indicate timer complete
         handler.postDelayed({
             Log.d(TAG, "Vibrating to indicate completion...")
             vibrate()
         }, 500)
+    }
+    
+    private fun sendBroadcastPause() {
+        try {
+            // Send broadcast intents to pause media
+            val pauseIntent = Intent("com.android.music.musicservicecommand")
+            pauseIntent.putExtra("command", "pause")
+            sendBroadcast(pauseIntent)
+            
+            // Alternative broadcast for some players
+            val toggleIntent = Intent("com.android.music.musicservicecommand")
+            toggleIntent.putExtra("command", "togglepause")
+            sendBroadcast(toggleIntent)
+            
+            Log.d(TAG, "Broadcast pause commands sent")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error sending broadcast: ${e.message}")
+        }
     }
     
     private fun sendShellMediaCommands() {
@@ -284,8 +344,74 @@ class MainActivity: FlutterActivity() {
         }
     }
 
-    private fun lockScreen() {
-        goToHomeScreen()
+    private fun lockScreen(): Boolean {
+        return try {
+            // Go to home first
+            goToHomeScreen()
+            
+            // Then lock the screen if Device Admin is active
+            if (isDeviceAdminActive()) {
+                Log.d(TAG, "Device Admin is active, locking screen...")
+                devicePolicyManager?.lockNow()
+                Log.d(TAG, "Screen locked successfully")
+                true
+            } else {
+                Log.w(TAG, "Device Admin not active, cannot lock screen")
+                false
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error locking screen: ${e.message}")
+            e.printStackTrace()
+            false
+        }
+    }
+    
+    private fun requestDeviceAdminPermission() {
+        try {
+            val intent = Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
+            intent.putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, adminComponent)
+            intent.putExtra(
+                DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                "Sleep Timer needs Device Admin permission to turn off the screen when the timer expires."
+            )
+            startActivityForResult(intent, 1001)
+            Log.d(TAG, "Device Admin permission request launched")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error requesting Device Admin: ${e.message}")
+        }
+    }
+    
+    private fun isDeviceAdminActive(): Boolean {
+        return try {
+            devicePolicyManager?.isAdminActive(adminComponent!!) ?: false
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking Device Admin: ${e.message}")
+            false
+        }
+    }
+    
+    private fun isNotificationListenerEnabled(): Boolean {
+        return try {
+            val enabledListeners = Settings.Secure.getString(
+                contentResolver,
+                "enabled_notification_listeners"
+            )
+            val packageName = packageName
+            enabledListeners?.contains(packageName) ?: false
+        } catch (e: Exception) {
+            Log.e(TAG, "Error checking notification listener: ${e.message}")
+            false
+        }
+    }
+    
+    private fun requestNotificationListenerPermission() {
+        try {
+            val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
+            startActivity(intent)
+            Log.d(TAG, "Notification listener settings opened")
+        } catch (e: Exception) {
+            Log.e(TAG, "Error opening notification listener settings: ${e.message}")
+        }
     }
 
     private fun isMediaPlaying(): Boolean {
