@@ -2,23 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsProvider extends ChangeNotifier {
-  bool _isDarkMode = true;
-  bool _vibrationEnabled = true;
-  bool _soundEnabled = true;
-  bool _autoStopEnabled = true;
-  bool _screenOffEnabled = true;
   bool _noSleepMode = false;
-  String _stopMethod = 'force_close'; // 'force_close', 'mute', 'pause'
-  int _tileDurationMinutes = 120; // Default Quick Settings tile duration
+  bool _vibrateOnComplete = true;
+  bool _showNotifications = true;
+  bool _pauseMediaOnComplete = true;
 
-  bool get isDarkMode => _isDarkMode;
-  bool get vibrationEnabled => _vibrationEnabled;
-  bool get soundEnabled => _soundEnabled;
-  bool get autoStopEnabled => _autoStopEnabled;
-  bool get screenOffEnabled => _screenOffEnabled;
   bool get noSleepMode => _noSleepMode;
-  String get stopMethod => _stopMethod;
-  int get tileDurationMinutes => _tileDurationMinutes;
+  bool get vibrateOnComplete => _vibrateOnComplete;
+  bool get showNotifications => _showNotifications;
+  bool get pauseMediaOnComplete => _pauseMediaOnComplete;
 
   SettingsProvider() {
     _loadSettings();
@@ -26,84 +18,38 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
-    _isDarkMode = prefs.getBool('dark_mode') ?? true;
-    _vibrationEnabled = prefs.getBool('vibration') ?? true;
-    _soundEnabled = prefs.getBool('sound') ?? true;
-    _autoStopEnabled = prefs.getBool('auto_stop') ?? true;
-    _screenOffEnabled = prefs.getBool('screen_off') ?? true;
     _noSleepMode = prefs.getBool('no_sleep_mode') ?? false;
-    _stopMethod = prefs.getString('stop_method') ?? 'force_close';
-    _tileDurationMinutes = prefs.getInt('default_duration_minutes') ?? 120;
+    _vibrateOnComplete = prefs.getBool('vibrate_on_complete') ?? true;
+    _showNotifications = prefs.getBool('show_notifications') ?? true;
+    _pauseMediaOnComplete = prefs.getBool('pause_media_on_complete') ?? true;
     notifyListeners();
   }
 
-  Future<void> toggleDarkMode() async {
-    _isDarkMode = !_isDarkMode;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('dark_mode', _isDarkMode);
+  Future<void> setNoSleepMode(bool value) async {
+    _noSleepMode = value;
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('no_sleep_mode', value);
   }
 
-  Future<void> toggleVibration() async {
-    _vibrationEnabled = !_vibrationEnabled;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('vibration', _vibrationEnabled);
+  Future<void> setVibrateOnComplete(bool value) async {
+    _vibrateOnComplete = value;
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('vibrate_on_complete', value);
   }
 
-  Future<void> toggleSound() async {
-    _soundEnabled = !_soundEnabled;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('sound', _soundEnabled);
+  Future<void> setShowNotifications(bool value) async {
+    _showNotifications = value;
     notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('show_notifications', value);
   }
 
-  Future<void> toggleAutoStop() async {
-    _autoStopEnabled = !_autoStopEnabled;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('auto_stop', _autoStopEnabled);
+  Future<void> setPauseMediaOnComplete(bool value) async {
+    _pauseMediaOnComplete = value;
     notifyListeners();
-  }
-
-  Future<void> toggleScreenOff() async {
-    _screenOffEnabled = !_screenOffEnabled;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('screen_off', _screenOffEnabled);
-    notifyListeners();
-  }
-
-  Future<void> toggleNoSleepMode() async {
-    _noSleepMode = !_noSleepMode;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('no_sleep_mode', _noSleepMode);
-    notifyListeners();
-  }
-
-  Future<void> setStopMethod(String method) async {
-    _stopMethod = method;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('stop_method', method);
-    notifyListeners();
-  }
-
-  Future<void> setTileDuration(int minutes) async {
-    if (minutes < 1 || minutes > 120) return; // Validate: 1-120 minutes
-    _tileDurationMinutes = minutes;
-    final prefs = await SharedPreferences.getInstance();
-
-    // Write to Flutter SharedPreferences (flutter.default_duration_minutes)
-    await prefs.setInt('default_duration_minutes', minutes);
-
-    // ALSO write to native tile SharedPreferences for direct access
-    // This ensures the tile can read it immediately
-    try {
-      // The tile reads from 'sleep_timer_tile' prefs file
-      // Flutter writes to 'FlutterSharedPreferences' by default
-      // We're writing with the flutter. prefix which the tile will check
-    } catch (e) {
-      print('Error writing tile duration: $e');
-    }
-
-    notifyListeners();
+    await prefs.setBool('pause_media_on_complete', value);
   }
 }
