@@ -9,7 +9,7 @@ class SettingsProvider extends ChangeNotifier {
   bool _screenOffEnabled = true;
   bool _noSleepMode = false;
   String _stopMethod = 'force_close'; // 'force_close', 'mute', 'pause'
-  int _tileDurationMinutes = 30; // Default Quick Settings tile duration
+  int _tileDurationMinutes = 120; // Default Quick Settings tile duration
 
   bool get isDarkMode => _isDarkMode;
   bool get vibrationEnabled => _vibrationEnabled;
@@ -33,7 +33,7 @@ class SettingsProvider extends ChangeNotifier {
     _screenOffEnabled = prefs.getBool('screen_off') ?? true;
     _noSleepMode = prefs.getBool('no_sleep_mode') ?? false;
     _stopMethod = prefs.getString('stop_method') ?? 'force_close';
-    _tileDurationMinutes = prefs.getInt('default_duration_minutes') ?? 30;
+    _tileDurationMinutes = prefs.getInt('default_duration_minutes') ?? 120;
     notifyListeners();
   }
 

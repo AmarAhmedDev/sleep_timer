@@ -23,7 +23,7 @@ class SleepTimerTileService : TileService() {
         private const val FLUTTER_KEY_PREFIX = "flutter."
         private const val KEY_REMAINING_TIME_MS = "remaining_time_ms"
         private const val KEY_START_TIME_MS = "start_time_ms"
-        private const val DEFAULT_DURATION = 1 // 1 minute for testing
+        private const val DEFAULT_DURATION = 120 // 2 hours for testing
     }
 
     override fun onCreate() {
