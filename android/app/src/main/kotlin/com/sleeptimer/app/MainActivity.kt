@@ -8,6 +8,9 @@ import android.content.Intent
 import android.media.AudioManager
 import android.media.AudioFocusRequest
 import android.media.AudioAttributes
+import android.media.session.MediaController
+import android.media.session.MediaSessionManager
+import android.media.session.PlaybackState
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -66,21 +69,21 @@ class MainActivity: FlutterActivity() {
         // Execute on main thread
         handler.post {
             try {
-                // STEP 1: Send shell commands for media keys (MOST RELIABLE)
-                Log.d(TAG, "Step 1: Sending shell media key commands...")
+                // STEP 1: Use MediaSessionManager to PAUSE all active media sessions (MOST RELIABLE FOR AUDIO)
+                Log.d(TAG, "Step 1: Pausing all media sessions via MediaSessionManager...")
+                pauseAllMediaSessions()
+                
+                // STEP 2: Send shell commands for media keys
+                Log.d(TAG, "Step 2: Sending shell media key commands...")
                 sendShellMediaCommands()
                 
-                // STEP 2: Use AudioManager key events
-                Log.d(TAG, "Step 2: Sending AudioManager key events...")
+                // STEP 3: Use AudioManager key events
+                Log.d(TAG, "Step 3: Sending AudioManager key events...")
                 sendAudioManagerKeyEvents()
                 
-                // STEP 3: Request audio focus
-                Log.d(TAG, "Step 3: Requesting audio focus...")
+                // STEP 4: Request audio focus
+                Log.d(TAG, "Step 4: Requesting audio focus...")
                 requestAudioFocusInterrupt()
-                
-                // STEP 4: Mute all audio
-                Log.d(TAG, "Step 4: Muting audio...")
-                muteAllAudio()
                 
             } catch (e: Exception) {
                 Log.e(TAG, "Error in initial stop: ${e.message}")
@@ -94,9 +97,10 @@ class MainActivity: FlutterActivity() {
             goToHomeScreen()
         }, 300)
         
-        // STEP 6: Send pause again
+        // STEP 6: Pause media sessions again + send pause commands
         handler.postDelayed({
-            Log.d(TAG, "Step 6: Second pause attempt...")
+            Log.d(TAG, "Step 6: Second pause attempt with MediaSessionManager...")
+            pauseAllMediaSessions()
             sendShellMediaCommands()
             sendAudioManagerKeyEvents()
         }, 600)
@@ -107,10 +111,10 @@ class MainActivity: FlutterActivity() {
             killMediaAppProcesses()
         }, 900)
         
-        // STEP 8: Final mute and pause
+        // STEP 8: Final pause attempt (no muting - we want to pause, not mute)
         handler.postDelayed({
-            Log.d(TAG, "Step 8: Final mute and pause...")
-            muteAllAudio()
+            Log.d(TAG, "Step 8: Final pause attempt...")
+            pauseAllMediaSessions()
             sendShellMediaCommands()
         }, 1200)
         
@@ -119,6 +123,85 @@ class MainActivity: FlutterActivity() {
             Log.d(TAG, "Vibrating to indicate completion...")
             vibrate()
         }, 500)
+    }
+    
+    private fun pauseAllMediaSessions() {
+        try {
+            Log.d(TAG, "--- Attempting to pause all media sessions ---")
+            
+            val mediaSessionManager = getSystemService(Context.MEDIA_SESSION_SERVICE) as? MediaSessionManager
+            if (mediaSessionManager == null) {
+                Log.e(TAG, "MediaSessionManager is null!")
+                return
+            }
+            
+            // Get the NotificationListener component for this app
+            val listenerComponent = ComponentName(this, com.sleeptimer.app.NotificationListener::class.java)
+            
+            val activeSessions: List<MediaController>
+            try {
+                activeSessions = mediaSessionManager.getActiveSessions(listenerComponent)
+            } catch (e: SecurityException) {
+                Log.e(TAG, "SecurityException getting sessions - Notification Listener permission may not be granted")
+                Log.e(TAG, "Falling back to other pause methods...")
+                return
+            }
+            
+            Log.d(TAG, "Found ${activeSessions.size} active media session(s)")
+            
+            if (activeSessions.isEmpty()) {
+                Log.w(TAG, "No active media sessions found!")
+                return
+            }
+            
+            for ((index, controller) in activeSessions.withIndex()) {
+                try {
+                    val packageName = controller.packageName
+                    val playbackState = controller.playbackState
+                    
+                    Log.d(TAG, "Session $index: $packageName")
+                    
+                    if (playbackState != null) {
+                        val stateName = when (playbackState.state) {
+                            PlaybackState.STATE_PLAYING -> "PLAYING"
+                            PlaybackState.STATE_PAUSED -> "PAUSED"
+                            PlaybackState.STATE_STOPPED -> "STOPPED"
+                            PlaybackState.STATE_BUFFERING -> "BUFFERING"
+                            else -> "OTHER (${playbackState.state})"
+                        }
+                        Log.d(TAG, "  Current state: $stateName")
+                        
+                        // Send pause and stop commands regardless of state
+                        Log.d(TAG, "  >>> Sending PAUSE command to $packageName")
+                        controller.transportControls.pause()
+                        
+                        // Also send stop for good measure
+                        Log.d(TAG, "  >>> Sending STOP command to $packageName")
+                        controller.transportControls.stop()
+                        
+                        Log.d(TAG, "  ✓ Commands sent successfully to $packageName")
+                    } else {
+                        // Even without playback state, try to send pause
+                        Log.w(TAG, "  PlaybackState is null, still attempting pause...")
+                        controller.transportControls.pause()
+                        controller.transportControls.stop()
+                    }
+                    
+                } catch (e: Exception) {
+                    Log.e(TAG, "  Error controlling session: ${e.message}")
+                    e.printStackTrace()
+                }
+            }
+            
+            Log.d(TAG, "--- pauseAllMediaSessions() completed ---")
+            
+        } catch (e: SecurityException) {
+            Log.e(TAG, "SecurityException in pauseAllMediaSessions: ${e.message}")
+            Log.e(TAG, "Notification Listener permission may not be granted!")
+        } catch (e: Exception) {
+            Log.e(TAG, "Unexpected error in pauseAllMediaSessions: ${e.message}")
+            e.printStackTrace()
+        }
     }
     
     private fun sendShellMediaCommands() {

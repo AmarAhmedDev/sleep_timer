@@ -1,6 +1,6 @@
 name: sleep_timer
 description: "Smart Sleep Timer - Auto stop media apps when timer ends"
-publish_to: 'none'
+publish_to: "none"
 
 version: 1.0.0+1
 
@@ -28,6 +28,25 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.3
+
+# Flutter Launcher Icons configuration
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/CircularIcon.png"
+  min_sdk_android: 21
+  adaptive_icon_background: "#0a0a1a"
+  adaptive_icon_foreground: "assets/icon/CircularIcon.png"
+  web:
+    generate: true
+    image_path: "assets/icon/CircularIcon.png"
+  windows:
+    generate: true
+    image_path: "assets/icon/CircularIcon.png"
+  macos:
+    generate: true
+    image_path: "assets/icon/CircularIcon.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

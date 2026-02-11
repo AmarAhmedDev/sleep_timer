@@ -21,7 +21,7 @@
     <application
         android:label="Sleep Timer"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/launcher_icon">
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -85,7 +85,7 @@
         <!-- Quick Settings Tile -->
         <service
             android:name=".SleepTimerTileService"
-            android:icon="@drawable/ic_tile_sleep_timer"
+            android:icon="@mipmap/launcher_icon"
             android:label="Sleep Timer"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
             android:exported="true">
