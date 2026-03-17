@@ -264,11 +264,12 @@ class SleepTimerTileService : TileService() {
                 val channel = android.app.NotificationChannel(
                     "sleep_timer_ongoing_v2",
                     "Active Timer",
-                    android.app.NotificationManager.IMPORTANCE_HIGH
+                    android.app.NotificationManager.IMPORTANCE_LOW
                 ).apply {
                     description = "Shows active sleep timer countdown"
-                    enableVibration(true)
-                    enableLights(true)
+                    enableVibration(false)
+                    enableLights(false)
+                    setSound(null, null)
                 }
                 notificationManager.createNotificationChannel(channel)
             }
@@ -290,15 +291,14 @@ class SleepTimerTileService : TileService() {
             val notification = android.app.Notification.Builder(this, "sleep_timer_ongoing_v2")
                 .apply {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+                        setSmallIcon(R.drawable.ic_tile_sleep_timer)
                     }
                 }
                 .setContentTitle("Sleep Timer Active")
-                .setContentText("$timeStr remaining")
+                .setContentText(timeStr)
                 .setOngoing(true)
                 .setShowWhen(false)
-                .setOnlyAlertOnce(true) // Alert only the first time
-                .setDefaults(android.app.Notification.DEFAULT_ALL) // Sound and vibration
+                .setOnlyAlertOnce(true)
                 .build()
             
             notificationManager.notify(1, notification)

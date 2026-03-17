@@ -50,65 +50,174 @@ class TileTimerReceiver : BroadcastReceiver() {
     private fun executeSleepActions(context: Context) {
         val handler = Handler(Looper.getMainLooper())
         
-        // STEP 1: Pause media using NotificationListener
-        Log.d(TAG, "Step 1: Pausing via NotificationListener...")
+        // STEP 1: IMMEDIATELY pause via MediaSession
+        Log.d(TAG, "Step 1: MediaSession pause (immediate)")
         try {
             NotificationListener.pauseAllMedia(context)
         } catch (e: Exception) {
-            Log.e(TAG, "NotificationListener pause failed: ${e.message}")
+            Log.e(TAG, "Step 1 failed: ${e.message}")
         }
         
-        // STEP 2: Send shell media commands
-        Log.d(TAG, "Step 2: Sending shell media commands...")
-        sendShellMediaCommands()
-        
-        // STEP 3: Send AudioManager key events
-        Log.d(TAG, "Step 3: Sending AudioManager key events...")
-        sendAudioManagerKeyEvents(context)
-        
-        // STEP 4: Mute audio
-        Log.d(TAG, "Step 4: Muting audio...")
-        muteAudio(context)
-        
-        // STEP 5: Go to home screen (after short delay)
+        // STEP 2: Request PERMANENT audio focus (100ms)
         handler.postDelayed({
-            Log.d(TAG, "Step 5: Going to home screen...")
-            goToHomeScreen(context)
-        }, 500)
-        
-        // STEP 6: Pause media again
-        handler.postDelayed({
-            Log.d(TAG, "Step 6: Second pause attempt...")
             try {
+                Log.d(TAG, "Step 2: Requesting PERMANENT audio focus")
+                requestAudioFocusPermanent(context)
+            } catch (e: Exception) {
+                Log.e(TAG, "Step 2 failed: ${e.message}")
+            }
+        }, 100)
+        
+        // STEP 3: Send AudioManager key events (200ms)
+        handler.postDelayed({
+            try {
+                Log.d(TAG, "Step 3: AudioManager key events")
+                sendAudioManagerKeyEvents(context)
+            } catch (e: Exception) {
+                Log.e(TAG, "Step 3 failed: ${e.message}")
+            }
+        }, 200)
+        
+        // STEP 4: Second MediaSession pause + broadcast (400ms)
+        handler.postDelayed({
+            try {
+                Log.d(TAG, "Step 4: Second MediaSession pause + broadcast")
+                NotificationListener.pauseAllMedia(context)
+                sendBroadcastPause(context)
+            } catch (e: Exception) {
+                Log.e(TAG, "Step 4 failed: ${e.message}")
+            }
+        }, 400)
+        
+        // STEP 5: Go to home screen (600ms)
+        handler.postDelayed({
+            Log.d(TAG, "Step 5: Going to home screen")
+            goToHomeScreen(context)
+        }, 600)
+        
+        // STEP 6: Third MediaSession pause after home (900ms)
+        handler.postDelayed({
+            try {
+                Log.d(TAG, "Step 6: Third MediaSession pause (post-home)")
+                NotificationListener.pauseAllMedia(context)
+                sendAudioManagerKeyEvents(context)
+            } catch (e: Exception) {
+                Log.e(TAG, "Step 6 failed: ${e.message}")
+            }
+        }, 900)
+        
+        // STEP 7: Mute audio as safety net (1100ms)
+        handler.postDelayed({
+            try {
+                Log.d(TAG, "Step 7: Muting audio as safety net")
+                muteAudio(context)
+            } catch (e: Exception) {
+                Log.e(TAG, "Step 7 failed: ${e.message}")
+            }
+        }, 1100)
+        
+        // STEP 8: Fourth MediaSession pause + audio focus (1400ms)
+        handler.postDelayed({
+            try {
+                Log.d(TAG, "Step 8: Fourth MediaSession pause")
+                NotificationListener.pauseAllMedia(context)
+                requestAudioFocusPermanent(context)
+            } catch (e: Exception) {
+                Log.e(TAG, "Step 8 failed: ${e.message}")
+            }
+        }, 1400)
+        
+        // STEP 9: Lock screen (1700ms)
+        handler.postDelayed({
+            Log.d(TAG, "Step 9: Locking screen")
+            lockScreen(context)
+        }, 1700)
+        
+        // STEP 10: Final pause after lock (2200ms)
+        handler.postDelayed({
+            try {
+                Log.d(TAG, "Step 10: Final MediaSession pause after lock")
+                NotificationListener.pauseAllMedia(context)
+                sendAudioManagerKeyEvents(context)
+            } catch (e: Exception) {
+                Log.e(TAG, "Step 10 failed: ${e.message}")
+            }
+        }, 2200)
+        
+        // STEP 11: Last resort pause (3000ms)
+        handler.postDelayed({
+            try {
+                Log.d(TAG, "Step 11: Last resort pause at 3s")
                 NotificationListener.pauseAllMedia(context)
             } catch (e: Exception) {
-                Log.e(TAG, "Second pause failed: ${e.message}")
+                Log.e(TAG, "Step 11 failed: ${e.message}")
             }
-            sendShellMediaCommands()
-        }, 800)
-        
-        // STEP 7: Lock screen
-        handler.postDelayed({
-            Log.d(TAG, "Step 7: Locking screen...")
-            lockScreen(context)
-        }, 1200)
-        
-        // STEP 8: Vibrate
-        handler.postDelayed({
-            Log.d(TAG, "Step 8: Vibrating...")
-            vibrate(context)
-        }, 600)
+        }, 3000)
+    }
+    
+    private fun sendBroadcastPause(context: Context) {
+        try {
+            val pauseIntent = Intent(Intent.ACTION_MEDIA_BUTTON)
+            context.sendBroadcast(pauseIntent)
+            
+            val musicPause = Intent("com.android.music.musicservicecommand")
+            musicPause.putExtra("command", "pause")
+            context.sendBroadcast(musicPause)
+            
+            // Samsung-specific broadcast  
+            val samsungIntent = Intent("com.sec.android.app.music.musicservicecommand")
+            samsungIntent.putExtra("command", "pause")
+            context.sendBroadcast(samsungIntent)
+            
+            Log.d(TAG, "Broadcast pause sent (including Samsung)")
+        } catch (e: Exception) {
+            Log.e(TAG, "Broadcast failed: ${e.message}")
+        }
+    }
+    
+    private fun requestAudioFocusPermanent(context: Context) {
+        try {
+            val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val audioAttributes = android.media.AudioAttributes.Builder()
+                    .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+                
+                // AUDIOFOCUS_GAIN forces all other apps to stop completely
+                val focusRequest = android.media.AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                    .setAudioAttributes(audioAttributes)
+                    .setAcceptsDelayedFocusGain(false)
+                    .setOnAudioFocusChangeListener { }
+                    .build()
+                
+                val result = audioManager.requestAudioFocus(focusRequest)
+                Log.d(TAG, "Audio focus GAIN result: $result")
+                
+                // Abandon focus after 2s to clean up
+                Handler(Looper.getMainLooper()).postDelayed({
+                    try {
+                        audioManager.abandonAudioFocusRequest(focusRequest)
+                    } catch (e: Exception) { }
+                }, 2000)
+            } else {
+                @Suppress("DEPRECATION")
+                audioManager.requestAudioFocus(
+                    { },
+                    AudioManager.STREAM_MUSIC,
+                    AudioManager.AUDIOFOCUS_GAIN
+                )
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Audio focus failed: ${e.message}")
+        }
     }
     
     private fun sendShellMediaCommands() {
         try {
-            // KEYCODE_MEDIA_PAUSE = 127
             executeShellCommand("input keyevent 127")
-            // KEYCODE_MEDIA_PLAY_PAUSE = 85
             executeShellCommand("input keyevent 85")
-            // KEYCODE_MEDIA_STOP = 86
-            executeShellCommand("input keyevent 86")
-            Log.d(TAG, "Shell media commands sent")
         } catch (e: Exception) {
             Log.e(TAG, "Shell commands failed: ${e.message}")
         }
@@ -226,7 +335,7 @@ class TileTimerReceiver : BroadcastReceiver() {
             
             // Build notification
             val notification = NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
-                .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
+                .setSmallIcon(R.drawable.ic_tile_sleep_timer)
                 .setContentTitle("Sleep Timer Complete")
                 .setContentText("Timer expired. Media paused and screen locked.")
                 .setPriority(NotificationCompat.PRIORITY_HIGH)

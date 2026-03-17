@@ -23,10 +23,11 @@ class NotificationService {
       'sleep_timer_main',
       'Sleep Timer Notifications',
       channelDescription: 'Notifications for sleep timer events',
-      importance: Importance.high,
-      priority: Priority.high,
-      playSound: true,
-      enableVibration: true,
+      importance: Importance.low,
+      priority: Priority.low,
+      playSound: false,
+      enableVibration: false,
+      silent: true,
     );
 
     const iosDetails = DarwinNotificationDetails();
@@ -68,14 +69,15 @@ class NotificationService {
       'sleep_timer_ongoing_v2',
       'Active Timer',
       channelDescription: 'Shows active sleep timer countdown',
-      importance: Importance.high,
-      priority: Priority.high,
+      importance: Importance.low,
+      priority: Priority.low,
       ongoing: true,
       autoCancel: false,
       showWhen: false,
       onlyAlertOnce: true,
-      playSound: true,
-      enableVibration: true,
+      playSound: false,
+      enableVibration: false,
+      silent: true,
     );
 
     const details = NotificationDetails(android: androidDetails);
@@ -83,7 +85,7 @@ class NotificationService {
     await _notifications.show(
       1,
       'Sleep Timer Active',
-      timeStr + ' remaining',
+      timeStr,
       details,
     );
   }

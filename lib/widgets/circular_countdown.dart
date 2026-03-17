@@ -85,15 +85,6 @@ class _CircularCountdownState extends State<CircularCountdown>
                   letterSpacing: 2,
                 ),
               ),
-              const SizedBox(height: 8),
-              Text(
-                widget.remainingSeconds > 0 ? 'Remaining' : 'Complete',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.white.withOpacity(0.7),
-                  letterSpacing: 1,
-                ),
-              ),
             ],
           ),
         ),

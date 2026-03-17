@@ -85,7 +85,7 @@
         <!-- Quick Settings Tile -->
         <service
             android:name=".SleepTimerTileService"
-            android:icon="@mipmap/launcher_icon"
+            android:icon="@drawable/ic_tile_sleep_timer"
             android:label="Sleep Timer"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
             android:exported="true">

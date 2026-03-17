@@ -107,129 +107,141 @@ class MainActivity: FlutterActivity() {
     }
 
     private fun stopMediaAndCloseApps() {
-        Log.d(TAG, "Starting enhanced media stop sequence...")
+        Log.d(TAG, "=== Starting AGGRESSIVE media stop sequence ===")
         
         val handler = Handler(Looper.getMainLooper())
         
-        // Execute on main thread
+        // STEP 1: IMMEDIATELY pause via MediaSession (most reliable on Samsung)
         handler.post {
             try {
-                // STEP 1: Use NotificationListener MediaSession control (MOST RELIABLE)
-                Log.d(TAG, "Step 1: Pausing via MediaSession...")
+                Log.d(TAG, "Step 1: MediaSession pause (immediate)")
                 NotificationListener.pauseAllMedia(this)
-                
-                // STEP 2: Send shell commands for media keys
-                Log.d(TAG, "Step 2: Sending shell media key commands...")
-                sendShellMediaCommands()
-                
-                // STEP 3: Send broadcast pause commands (for apps like YouTube)
-                Log.d(TAG, "Step 3: Sending broadcast pause...")
-                sendBroadcastPause()
-                
-                // STEP 4: Use AudioManager key events
-                Log.d(TAG, "Step 4: Sending AudioManager key events...")
-                sendAudioManagerKeyEvents()
-                
-                // STEP 5: Request audio focus
-                Log.d(TAG, "Step 5: Requesting audio focus...")
-                requestAudioFocusInterrupt()
-                
-                // STEP 6: Mute all audio
-                Log.d(TAG, "Step 6: Muting audio...")
-                muteAllAudio()
-                
             } catch (e: Exception) {
-                Log.e(TAG, "Error in initial stop: ${e.message}")
-                e.printStackTrace()
+                Log.e(TAG, "Step 1 failed: ${e.message}")
             }
         }
         
-        // STEP 7: Go to home screen after short delay
+        // STEP 2: Request PERMANENT audio focus to force all apps to stop (100ms)
         handler.postDelayed({
-            Log.d(TAG, "Step 7: Going to home screen...")
-            goToHomeScreen()
+            try {
+                Log.d(TAG, "Step 2: Requesting PERMANENT audio focus")
+                requestAudioFocusPermanent()
+            } catch (e: Exception) {
+                Log.e(TAG, "Step 2 failed: ${e.message}")
+            }
+        }, 100)
+        
+        // STEP 3: Send AudioManager key events (200ms)
+        handler.postDelayed({
+            try {
+                Log.d(TAG, "Step 3: AudioManager key events")
+                sendAudioManagerKeyEvents()
+            } catch (e: Exception) {
+                Log.e(TAG, "Step 3 failed: ${e.message}")
+            }
+        }, 200)
+        
+        // STEP 4: Second MediaSession pause + broadcast (400ms)
+        handler.postDelayed({
+            try {
+                Log.d(TAG, "Step 4: Second MediaSession pause + broadcast")
+                NotificationListener.pauseAllMedia(this)
+                sendBroadcastPause()
+            } catch (e: Exception) {
+                Log.e(TAG, "Step 4 failed: ${e.message}")
+            }
         }, 400)
         
-        // STEP 8: Send pause commands again
+        // STEP 5: Go to home screen (600ms)
         handler.postDelayed({
-            Log.d(TAG, "Step 8: Second pause attempt...")
-            NotificationListener.pauseAllMedia(this)
-            sendShellMediaCommands()
-            sendBroadcastPause()
-        }, 700)
+            Log.d(TAG, "Step 5: Going to home screen")
+            goToHomeScreen()
+        }, 600)
         
-        // STEP 9: Kill media app processes
+        // STEP 6: Third MediaSession pause after going home (900ms)
         handler.postDelayed({
-            Log.d(TAG, "Step 9: Killing media apps...")
+            try {
+                Log.d(TAG, "Step 6: Third MediaSession pause (post-home)")
+                NotificationListener.pauseAllMedia(this)
+                sendAudioManagerKeyEvents()
+            } catch (e: Exception) {
+                Log.e(TAG, "Step 6 failed: ${e.message}")
+            }
+        }, 900)
+        
+        // STEP 7: Mute audio as safety net (1100ms)
+        handler.postDelayed({
+            try {
+                Log.d(TAG, "Step 7: Muting audio as safety net")
+                muteAllAudio()
+            } catch (e: Exception) {
+                Log.e(TAG, "Step 7 failed: ${e.message}")
+            }
+        }, 1100)
+        
+        // STEP 8: Kill media app processes (1300ms)
+        handler.postDelayed({
+            Log.d(TAG, "Step 8: Killing media apps")
             killMediaAppProcesses()
-        }, 1000)
-        
-        // STEP 10: Lock screen if Device Admin is active
-        handler.postDelayed({
-            Log.d(TAG, "Step 10: Locking screen...")
-            lockScreen()
         }, 1300)
         
-        // STEP 11: Final pause attempt
+        // STEP 9: Fourth MediaSession pause + audio focus (1500ms)
         handler.postDelayed({
-            Log.d(TAG, "Step 11: Final pause...")
-            NotificationListener.pauseAllMedia(this)
-            sendShellMediaCommands()
+            try {
+                Log.d(TAG, "Step 9: Fourth MediaSession pause")
+                NotificationListener.pauseAllMedia(this)
+                requestAudioFocusPermanent()
+            } catch (e: Exception) {
+                Log.e(TAG, "Step 9 failed: ${e.message}")
+            }
         }, 1500)
         
-        // Vibrate to indicate timer complete
+        // STEP 10: Lock screen (1800ms)
         handler.postDelayed({
-            Log.d(TAG, "Vibrating to indicate completion...")
-            vibrate()
-        }, 500)
+            Log.d(TAG, "Step 10: Locking screen")
+            lockScreen()
+        }, 1800)
+        
+        // STEP 11: Final aggressive pause after lock (2200ms)
+        handler.postDelayed({
+            try {
+                Log.d(TAG, "Step 11: Final MediaSession pause after lock")
+                NotificationListener.pauseAllMedia(this)
+                sendAudioManagerKeyEvents()
+            } catch (e: Exception) {
+                Log.e(TAG, "Step 11 failed: ${e.message}")
+            }
+        }, 2200)
+        
+        // STEP 12: Last resort pause (3000ms)
+        handler.postDelayed({
+            try {
+                Log.d(TAG, "Step 12: Last resort pause at 3s")
+                NotificationListener.pauseAllMedia(this)
+            } catch (e: Exception) {
+                Log.e(TAG, "Step 12 failed: ${e.message}")
+            }
+        }, 3000)
     }
     
     private fun sendBroadcastPause() {
         try {
-            // Send broadcast intents to pause media
             val pauseIntent = Intent("com.android.music.musicservicecommand")
             pauseIntent.putExtra("command", "pause")
             sendBroadcast(pauseIntent)
             
-            // Alternative broadcast for some players
             val toggleIntent = Intent("com.android.music.musicservicecommand")
             toggleIntent.putExtra("command", "togglepause")
             sendBroadcast(toggleIntent)
             
-            Log.d(TAG, "Broadcast pause commands sent")
+            // Samsung-specific broadcast
+            val samsungIntent = Intent("com.sec.android.app.music.musicservicecommand")
+            samsungIntent.putExtra("command", "pause")
+            sendBroadcast(samsungIntent)
+            
+            Log.d(TAG, "Broadcast pause commands sent (including Samsung)")
         } catch (e: Exception) {
             Log.e(TAG, "Error sending broadcast: ${e.message}")
-        }
-    }
-    
-    private fun sendShellMediaCommands() {
-        try {
-            // Use shell command to send media key events
-            // These are the most reliable way to pause media on Android
-            
-            // KEYCODE_MEDIA_PAUSE = 127
-            executeShellCommand("input keyevent 127")
-            
-            // KEYCODE_MEDIA_PLAY_PAUSE = 85 
-            executeShellCommand("input keyevent 85")
-            
-            // KEYCODE_MEDIA_STOP = 86
-            executeShellCommand("input keyevent 86")
-            
-            Log.d(TAG, "Shell media commands sent successfully")
-        } catch (e: Exception) {
-            Log.e(TAG, "Error sending shell commands: ${e.message}")
-            e.printStackTrace()
-        }
-    }
-    
-    private fun executeShellCommand(command: String) {
-        try {
-            val process = Runtime.getRuntime().exec(command)
-            process.waitFor()
-            Log.d(TAG, "Executed: $command")
-        } catch (e: Exception) {
-            Log.e(TAG, "Shell command failed: $command - ${e.message}")
         }
     }
     
@@ -237,22 +249,16 @@ class MainActivity: FlutterActivity() {
         try {
             val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
             
-            // Send PAUSE
+            // Send PAUSE key event (most important)
             var event = KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PAUSE)
             audioManager.dispatchMediaKeyEvent(event)
             event = KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PAUSE)
             audioManager.dispatchMediaKeyEvent(event)
             
-            // Send PLAY_PAUSE (toggle)
+            // Send PLAY_PAUSE toggle  
             event = KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
             audioManager.dispatchMediaKeyEvent(event)
             event = KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE)
-            audioManager.dispatchMediaKeyEvent(event)
-            
-            // Send STOP
-            event = KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_MEDIA_STOP)
-            audioManager.dispatchMediaKeyEvent(event)
-            event = KeyEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_MEDIA_STOP)
             audioManager.dispatchMediaKeyEvent(event)
             
             Log.d(TAG, "AudioManager key events sent")
@@ -261,7 +267,8 @@ class MainActivity: FlutterActivity() {
         }
     }
     
-    private fun requestAudioFocusInterrupt() {
+    // Use PERMANENT audio focus gain to force all other apps to stop
+    private fun requestAudioFocusPermanent() {
         try {
             val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
             
@@ -271,21 +278,31 @@ class MainActivity: FlutterActivity() {
                     .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                     .build()
                     
-                val focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+                // Use AUDIOFOCUS_GAIN (permanent) instead of TRANSIENT
+                // This forces other apps to give up audio focus completely
+                val focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
                     .setAudioAttributes(audioAttributes)
+                    .setAcceptsDelayedFocusGain(false)
                     .setOnAudioFocusChangeListener { }
                     .build()
                     
-                audioManager.requestAudioFocus(focusRequest)
-                Log.d(TAG, "Audio focus requested (API 26+)")
+                val result = audioManager.requestAudioFocus(focusRequest)
+                Log.d(TAG, "Audio focus GAIN result: $result")
+                
+                // Abandon focus after a short delay to clean up
+                Handler(Looper.getMainLooper()).postDelayed({
+                    try {
+                        audioManager.abandonAudioFocusRequest(focusRequest)
+                    } catch (e: Exception) { }
+                }, 2000)
             } else {
                 @Suppress("DEPRECATION")
                 audioManager.requestAudioFocus(
                     { },
                     AudioManager.STREAM_MUSIC,
-                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT
+                    AudioManager.AUDIOFOCUS_GAIN
                 )
-                Log.d(TAG, "Audio focus requested (legacy)")
+                Log.d(TAG, "Audio focus GAIN requested (legacy)")
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error requesting audio focus: ${e.message}")
@@ -296,7 +313,7 @@ class MainActivity: FlutterActivity() {
         try {
             val audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
             
-            // Set volume to 0
+            // Set volume to 0 for music stream
             audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, 0, 0)
             
             // Mute the stream

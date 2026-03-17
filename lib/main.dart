@@ -9,7 +9,14 @@ import 'services/notification_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize services
+  // Run app immediately for fast startup
+  runApp(const MyApp());
+
+  // Initialize services in the background (non-blocking)
+  _initializeServices();
+}
+
+Future<void> _initializeServices() async {
   await NotificationService.initialize();
   FlutterForegroundTask.init(
     androidNotificationOptions: AndroidNotificationOptions(
@@ -27,8 +34,6 @@ void main() async {
       allowWifiLock: false,
     ),
   );
-
-  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
