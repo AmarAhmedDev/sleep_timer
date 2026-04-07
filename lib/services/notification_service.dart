@@ -6,7 +6,7 @@ class NotificationService {
 
   static Future<void> initialize() async {
     const androidSettings = AndroidInitializationSettings(
-      '@mipmap/ic_launcher',
+      '@mipmap/launcher_icon',
     );
     const iosSettings = DarwinInitializationSettings();
 
@@ -15,7 +15,17 @@ class NotificationService {
       iOS: iosSettings,
     );
 
-    await _notifications.initialize(settings);
+    try {
+      await _notifications.initialize(settings);
+    
+      // Explicitly request notification permissions on Android 13+ through the exact plugin implementation
+      await _notifications
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.requestNotificationsPermission();
+    } catch (e) {
+      print('Notification Init Error: $e');
+    }
   }
 
   static Future<void> showNotification(String title, String body) async {

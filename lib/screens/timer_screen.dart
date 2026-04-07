@@ -84,6 +84,11 @@ class _TimerScreenState extends State<TimerScreen> {
       _isTimerActive = true;
     });
 
+    // Make the notification immediately visible upon pressing start
+    NotificationService.updateOngoingNotification(
+      remainingSeconds: _remainingSeconds,
+    ).catchError((e) => print('Notification Error: $e'));
+
     // Start countdown
     _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_remainingSeconds > 0) {
