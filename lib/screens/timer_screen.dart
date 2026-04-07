@@ -42,9 +42,37 @@ class _TimerScreenState extends State<TimerScreen> {
   void _startTimer() async {
     if (selectedHours == 0 && selectedMinutes == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a time greater than 0'),
-          backgroundColor: Colors.red,
+        SnackBar(
+          content: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.error_outline, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Text(
+                  'Please select a time greater than 0',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: const Color(0xFFE53935),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          margin: const EdgeInsets.only(bottom: 24, left: 20, right: 20),
+          elevation: 10,
+          duration: const Duration(seconds: 3),
         ),
       );
       return;
